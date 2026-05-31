@@ -56,11 +56,6 @@
                     "type": "CheckBox",
                     "name": "CreateAdvanced",
                     "caption": "Create advanced variables (config, counters, errors)"
-                },
-                {
-                    "type": "CheckBox",
-                    "name": "EnableLogging",
-                    "caption": "Enable archive logging for created variables"
                 }
             ]
         }

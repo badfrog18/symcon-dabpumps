@@ -26,7 +26,6 @@ class DABEsyBox extends IPSModule
 
         // Erweiterte Werte mit anlegen
         $this->RegisterPropertyBoolean('CreateAdvanced', false);
-        $this->RegisterPropertyBoolean('EnableLogging', true);
 
         // Token-Cache (Attribute überleben Neustart)
         $this->RegisterAttributeString('AccessToken', '');
@@ -238,7 +237,6 @@ class DABEsyBox extends IPSModule
             $online = (time() - strtotime($status['statusts'])) < self::ONLINE_TIMEOUT;
         }
         $this->MaintainVariable('Online', $this->Translate('Online'), VARIABLETYPE_BOOLEAN, '~Switch', 1, true);
-        $this->EnableArchiveLogging('Online');
         $this->SetValueSafe('Online', $online);
 
         $this->MaintainVariable('LastUpdate', $this->Translate('Last Update'), VARIABLETYPE_STRING, '', 2, true);
@@ -270,7 +268,6 @@ class DABEsyBox extends IPSModule
             }
 
             $this->MaintainVariable($key, $this->Translate($name), $type, $profile, $pos++, true);
-            $this->EnableArchiveLogging($key);
             $this->SetValueSafe($key, $this->ConvertValue($raw, $type, $divisor));
         }
     }
@@ -294,29 +291,6 @@ class DABEsyBox extends IPSModule
             case VARIABLETYPE_FLOAT:   return round(floatval($raw) / max(1, $divisor), 2);
             case VARIABLETYPE_STRING:  return strval($raw);
             default:                   return null;
-        }
-    }
-
-    /**
-     * Aktiviert das Archiv-Logging für eine bereits angelegte Variable
-     */
-    private function EnableArchiveLogging(string $ident)
-    {
-        if (!$this->ReadPropertyBoolean('EnableLogging')) {
-            return;
-        }
-        $vid = @$this->GetIDForIdent($ident);
-        if ($vid === false || !function_exists('AC_GetLoggingStatus')) {
-            return;
-        }
-        $archiveIDs = IPS_GetInstanceListByModuleID('{43192F0B-135B-4CE7-A0A7-1475603F3060}');
-        if (count($archiveIDs) === 0) {
-            return;
-        }
-        $aid = $archiveIDs[0];
-        if (!AC_GetLoggingStatus($aid, $vid)) {
-            AC_SetLoggingStatus($aid, $vid, true);
-            IPS_ApplyChanges($aid);
         }
     }
 
@@ -392,8 +366,8 @@ class DABEsyBox extends IPSModule
             'TE_HeatsinkTemperatureC'      => ['Heatsink Temperature',   VARIABLETYPE_FLOAT,   '~Temperature',      10, false],
 
             // Zähler & Statistik
-            'FCt_Total_Delivered_Flow_mc'  => ['Total Flow',             VARIABLETYPE_FLOAT,   'DABEsy.FlowTotal',   1000, false],
-            'FCp_Partial_Delivered_Flow_mc'=> ['Partial Flow',           VARIABLETYPE_FLOAT,   'DABEsy.FlowTotal',   1000, true],
+            'FCt_Total_Delivered_Flow_mc'  => ['Total Flow',             VARIABLETYPE_FLOAT,   'DABEsy.FlowTotal', 1000, false],
+            'FCp_Partial_Delivered_Flow_mc'=> ['Partial Flow',           VARIABLETYPE_FLOAT,   'DABEsy.FlowTotal', 1000, true],
             'TotalEnergy'                  => ['Total Energy',           VARIABLETYPE_FLOAT,   'DABEsy.kWh',         10, false],
             'PartialEnergy'                => ['Partial Energy',         VARIABLETYPE_FLOAT,   'DABEsy.kWh',         10, true],
             'StartNumber'                  => ['Start Count',            VARIABLETYPE_INTEGER, '',                   1, true],

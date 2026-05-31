@@ -13,7 +13,6 @@
             "Update Interval": "Abrufintervall",
             "seconds": "Sekunden",
             "Create advanced variables (config, counters, errors)": "Erweiterte Variablen anlegen (Konfiguration, Zähler, Fehler)",
-            "Enable archive logging for created variables": "Archiv-Logging für angelegte Variablen aktivieren",
             "Test Connection": "Verbindung testen",
             "Update Now": "Jetzt aktualisieren",
             "Active": "Aktiv",
