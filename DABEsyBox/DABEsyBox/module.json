@@ -1,0 +1,16 @@
+{
+    "id": "{907930CA-F5E7-4209-8FAF-9DDC3DF62B63}",
+    "name": "DABEsyBox",
+    "type": 3,
+    "vendor": "DAB Pumps",
+    "aliases": [
+        "DAB EsyBox",
+        "DAB EsyBox Mini 3",
+        "E.SyBox"
+    ],
+    "url": "https://github.com/badfrog18/symcon-dabpumps",
+    "parentRequirements": [],
+    "childRequirements": [],
+    "implemented": [],
+    "prefix": "DABEsy"
+}
