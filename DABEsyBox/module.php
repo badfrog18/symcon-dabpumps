@@ -394,8 +394,8 @@ class DABEsyBox extends IPSModule
             // Zähler & Statistik
             'FCt_Total_Delivered_Flow_mc'  => ['Total Flow',             VARIABLETYPE_FLOAT,   'DABEsy.FlowTotal',   1000, false],
             'FCp_Partial_Delivered_Flow_mc'=> ['Partial Flow',           VARIABLETYPE_FLOAT,   'DABEsy.FlowTotal',   1000, true],
-            'TotalEnergy'                  => ['Total Energy',           VARIABLETYPE_FLOAT,   'DABEsy.kWh',         1, false],
-            'PartialEnergy'                => ['Partial Energy',         VARIABLETYPE_FLOAT,   'DABEsy.kWh',         1, true],
+            'TotalEnergy'                  => ['Total Energy',           VARIABLETYPE_FLOAT,   'DABEsy.kWh',         10, false],
+            'PartialEnergy'                => ['Partial Energy',         VARIABLETYPE_FLOAT,   'DABEsy.kWh',         10, true],
             'StartNumber'                  => ['Start Count',            VARIABLETYPE_INTEGER, '',                   1, true],
             'SO_PowerOnSeconds'            => ['Power-On Time',          VARIABLETYPE_INTEGER, 'DABEsy.Hours',    3600, false],
             'SO_PumpRunSeconds'            => ['Pump Run Time',          VARIABLETYPE_INTEGER, 'DABEsy.Hours',    3600, false],
