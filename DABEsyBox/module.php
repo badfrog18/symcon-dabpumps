@@ -238,6 +238,7 @@ class DABEsyBox extends IPSModule
             $online = (time() - strtotime($status['statusts'])) < self::ONLINE_TIMEOUT;
         }
         $this->MaintainVariable('Online', $this->Translate('Online'), VARIABLETYPE_BOOLEAN, '~Switch', 1, true);
+        $this->EnableArchiveLogging('Online');
         $this->SetValueSafe('Online', $online);
 
         $this->MaintainVariable('LastUpdate', $this->Translate('Last Update'), VARIABLETYPE_STRING, '', 2, true);
@@ -269,6 +270,7 @@ class DABEsyBox extends IPSModule
             }
 
             $this->MaintainVariable($key, $this->Translate($name), $type, $profile, $pos++, true);
+            $this->EnableArchiveLogging($key);
             $this->SetValueSafe($key, $this->ConvertValue($raw, $type, $divisor));
         }
     }
@@ -296,24 +298,25 @@ class DABEsyBox extends IPSModule
     }
 
     /**
-     * MaintainVariable mit Logging-Steuerung
+     * Aktiviert das Archiv-Logging für eine bereits angelegte Variable
      */
-    private function MaintainVariable($ident, $name, $type, $profile, $position, $keep)
+    private function EnableArchiveLogging(string $ident)
     {
-        parent::MaintainVariable($ident, $name, $type, $profile, $position, $keep);
-
-        if ($this->ReadPropertyBoolean('EnableLogging')) {
-            $vid = @$this->GetIDForIdent($ident);
-            if ($vid !== false && function_exists('AC_GetLoggingStatus')) {
-                $archiveIDs = IPS_GetInstanceListByModuleID('{43192F0B-135B-4CE7-A0A7-1475603F3060}');
-                if (count($archiveIDs) > 0) {
-                    $aid = $archiveIDs[0];
-                    if (!AC_GetLoggingStatus($aid, $vid)) {
-                        AC_SetLoggingStatus($aid, $vid, true);
-                        IPS_ApplyChanges($aid);
-                    }
-                }
-            }
+        if (!$this->ReadPropertyBoolean('EnableLogging')) {
+            return;
+        }
+        $vid = @$this->GetIDForIdent($ident);
+        if ($vid === false || !function_exists('AC_GetLoggingStatus')) {
+            return;
+        }
+        $archiveIDs = IPS_GetInstanceListByModuleID('{43192F0B-135B-4CE7-A0A7-1475603F3060}');
+        if (count($archiveIDs) === 0) {
+            return;
+        }
+        $aid = $archiveIDs[0];
+        if (!AC_GetLoggingStatus($aid, $vid)) {
+            AC_SetLoggingStatus($aid, $vid, true);
+            IPS_ApplyChanges($aid);
         }
     }
 

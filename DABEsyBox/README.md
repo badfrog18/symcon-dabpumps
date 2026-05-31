@@ -31,7 +31,7 @@ Liest Betriebsdaten einer DAB E.SyBox (Mini 3 / Mini / 2.0 / etc.) über die DAB
 
 * Über den Module Store das 'DAB EsyBox'-Modul installieren.
 * Alternativ über das Module Control folgende URL hinzufügen:
-  `https://github.com/mbruckmoser/symcon-dabpumps`
+  `https://github.com/badfrog18/symcon-dabpumps`
 
 ## 4. Einrichten der Instanzen in IP-Symcon
 
