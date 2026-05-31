@@ -1,0 +1,9 @@
+{
+    "id": "{CA9A78F8-EBF9-4601-A34F-FB72C3A9A783}",
+    "author": "Manuel Bruckmoser",
+    "name": "DAB Pumps",
+    "url": "https://github.com/mbruckmoser/symcon-dabpumps",
+    "compatibility": {
+        "base": "7.0"
+    }
+}
