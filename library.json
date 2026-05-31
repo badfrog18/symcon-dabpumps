@@ -4,6 +4,9 @@
     "name": "DAB Pumps",
     "url": "https://github.com/badfrog18/symcon-dabpumps",
     "compatibility": {
-        "base": "7.0"
-    }
+        "version": "7.0"
+    },
+    "version": "1.0",
+    "build": 1,
+    "date": 0
 }
