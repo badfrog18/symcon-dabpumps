@@ -22,7 +22,7 @@ Die folgenden Module beinhaltet diese Bibliothek:
 Über den Module Store oder durch Hinzufügen folgender URL im Module Control:
 
 ```
-https://github.com/mbruckmoser/symcon-dabpumps
+https://github.com/badfrog18/symcon-dabpumps
 ```
 
 ## Lizenz
