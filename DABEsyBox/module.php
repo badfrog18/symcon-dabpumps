@@ -392,8 +392,8 @@ class DABEsyBox extends IPSModule
             'TE_HeatsinkTemperatureC'      => ['Heatsink Temperature',   VARIABLETYPE_FLOAT,   '~Temperature',      10, false],
 
             // Zähler & Statistik
-            'FCt_Total_Delivered_Flow_mc'  => ['Total Flow',             VARIABLETYPE_FLOAT,   'DABEsy.FlowTotal',   1, false],
-            'FCp_Partial_Delivered_Flow_mc'=> ['Partial Flow',           VARIABLETYPE_FLOAT,   'DABEsy.FlowTotal',   1, true],
+            'FCt_Total_Delivered_Flow_mc'  => ['Total Flow',             VARIABLETYPE_FLOAT,   'DABEsy.FlowTotal',   1000, false],
+            'FCp_Partial_Delivered_Flow_mc'=> ['Partial Flow',           VARIABLETYPE_FLOAT,   'DABEsy.FlowTotal',   1000, true],
             'TotalEnergy'                  => ['Total Energy',           VARIABLETYPE_FLOAT,   'DABEsy.kWh',         1, false],
             'PartialEnergy'                => ['Partial Energy',         VARIABLETYPE_FLOAT,   'DABEsy.kWh',         1, true],
             'StartNumber'                  => ['Start Count',            VARIABLETYPE_INTEGER, '',                   1, true],
