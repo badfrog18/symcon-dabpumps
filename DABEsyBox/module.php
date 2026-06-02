@@ -257,9 +257,10 @@ class DABEsyBox extends IPSModule
     private function GetActionKeys(): array
     {
         return [
-            'SP_SetpointPressureBar',   // Soll-Druck
-            'PowerShowerCommand',       // Power Shower an/aus
-            'SleepModeEnable',          // Sleep Mode an/aus
+            'SP_SetpointPressureBar',   // Soll-Druck (Slider 1–5,5 bar)
+            'SleepModeEnable',          // Sleep Mode an/aus (Schalter)
+            'AY_AntiCycling',           // Anti-Cycling (Aus/Ein/Smart)
+            'EK_LowPressEnable',        // Niederdruckschutz (Aus/Automatik/Manuell)
         ];
     }
 
@@ -421,9 +422,21 @@ class DABEsyBox extends IPSModule
                 return (string) intval($value);
             }
             if ($type === 'enum') {
-                // Wenn ein Label übergeben wurde, passenden Code suchen
+                // Boolean (z.B. von einem ~Switch) auf 1/0 abbilden
+                if (is_bool($value)) {
+                    return $value ? '1' : '0';
+                }
+                $valueStr = (string) $value;
                 foreach (($p['values'] ?? []) as $v) {
-                    if (is_array($v) && count($v) >= 2 && (string) $v[1] === (string) $value) {
+                    if (!is_array($v) || count($v) < 2) {
+                        continue;
+                    }
+                    // Direkter Code-Treffer (Wert ist bereits der Code, z.B. "1")
+                    if ((string) $v[0] === $valueStr) {
+                        return (string) $v[0];
+                    }
+                    // Label-Treffer (Wert ist der Klartext, z.B. "Enable")
+                    if ((string) $v[1] === $valueStr) {
                         return (string) $v[0];
                     }
                 }
@@ -572,7 +585,7 @@ class DABEsyBox extends IPSModule
         return [
             // Betriebswerte
             'VP_PressureBar'               => ['Current Pressure',       VARIABLETYPE_FLOAT,   'DABEsy.Pressure',   10, false],
-            'SP_SetpointPressureBar'       => ['Setpoint Pressure',      VARIABLETYPE_FLOAT,   'DABEsy.Pressure',   10, false],
+            'SP_SetpointPressureBar'       => ['Setpoint Pressure',      VARIABLETYPE_FLOAT,   'DABEsy.Setpoint',   10, false],
             'VF_FlowLiter'                 => ['Flow Rate',              VARIABLETYPE_FLOAT,   'DABEsy.Flow',        1, false],
             'PO_OutputPower'               => ['Output Power',           VARIABLETYPE_INTEGER, '~Watt',              1, false],
             'C1_PumpPhaseCurrent'          => ['Pump Current',           VARIABLETYPE_FLOAT,   'DABEsy.Ampere',     10, false],
@@ -605,9 +618,12 @@ class DABEsyBox extends IPSModule
             'TB_DryRunDetectTime'          => ['Dry Run Detect Time',    VARIABLETYPE_INTEGER, 'DABEsy.Seconds',     1, true],
             'AE_AntiLock'                  => ['Anti-Lock',              VARIABLETYPE_BOOLEAN, '~Switch',            1, true],
             'AF_AntiFreeze'                => ['Anti-Freeze',            VARIABLETYPE_BOOLEAN, '~Switch',            1, true],
+            'AY_AntiCycling'               => ['Anti-Cycling',           VARIABLETYPE_INTEGER, 'DABEsy.AntiCycling', 1, true],
+            'EK_LowPressEnable'            => ['Low Pressure Protection', VARIABLETYPE_INTEGER, 'DABEsy.LowPress',   1, true],
+            'PumpDisable'                  => ['Pump Disable',           VARIABLETYPE_INTEGER, 'DABEsy.PumpDisable', 1, true],
 
             // Power Shower / Sleep Mode
-            'PowerShowerCommand'           => ['Power Shower Active',    VARIABLETYPE_BOOLEAN, '~Switch',            1, true],
+            'PowerShowerCommand'           => ['Power Shower Command',   VARIABLETYPE_INTEGER, 'DABEsy.PowerShower', 1, true],
             'PowerShowerPressureBar'       => ['Power Shower Pressure',  VARIABLETYPE_FLOAT,   'DABEsy.Pressure',   10, true],
             'SleepModeEnable'              => ['Sleep Mode Active',      VARIABLETYPE_BOOLEAN, '~Switch',            1, true],
             'SleepModePressureBar'         => ['Sleep Mode Pressure',    VARIABLETYPE_FLOAT,   'DABEsy.Pressure',   10, true],
@@ -625,6 +641,7 @@ class DABEsyBox extends IPSModule
     private function RegisterProfiles()
     {
         $this->CreateProfile('DABEsy.Pressure',  VARIABLETYPE_FLOAT,   '', ' bar',   1, 0, 8,    0.1, 'Gauge');
+        $this->CreateProfile('DABEsy.Setpoint',  VARIABLETYPE_FLOAT,   '', ' bar',   1, 1, 5.5,  0.1, 'Gauge');
         $this->CreateProfile('DABEsy.Flow',      VARIABLETYPE_FLOAT,   '', ' l/min', 1, 0, 0,    0.1, 'Drops');
         $this->CreateProfile('DABEsy.FlowTotal', VARIABLETYPE_FLOAT,   '', ' m³',    1, 0, 0,    0.1, 'Drops');
         $this->CreateProfile('DABEsy.kWh',       VARIABLETYPE_FLOAT,   '', ' kWh',   1, 0, 0,    0.1, 'EnergyProduction');
@@ -633,6 +650,43 @@ class DABEsyBox extends IPSModule
         $this->CreateProfile('DABEsy.Signal',    VARIABLETYPE_INTEGER, '', ' %',     0, 0, 100,  1,   'Network');
         $this->CreateProfile('DABEsy.Seconds',   VARIABLETYPE_INTEGER, '', ' s',     0, 0, 0,    1,   'Clock');
         $this->CreateProfile('DABEsy.Hours',     VARIABLETYPE_INTEGER, '', ' h',     0, 0, 0,    1,   'Clock');
+
+        // Enum-Profile mit Klartext-Beschriftung
+        $this->CreateEnumProfile('DABEsy.PowerShower', 'Shower', [
+            [0, $this->Translate('Off'),   -1],
+            [1, $this->Translate('Start'), 0x00AA00],
+            [2, $this->Translate('Stop'),  0xAA0000],
+        ]);
+        $this->CreateEnumProfile('DABEsy.AntiCycling', 'Repeat', [
+            [0, $this->Translate('Disabled'), -1],
+            [1, $this->Translate('Enabled'),  0x00AA00],
+            [2, $this->Translate('Smart'),    0x0088FF],
+        ]);
+        $this->CreateEnumProfile('DABEsy.LowPress', 'Gauge', [
+            [0, $this->Translate('Disabled'),  -1],
+            [1, $this->Translate('Automatic'), 0x00AA00],
+            [2, $this->Translate('Manual'),    0x0088FF],
+        ]);
+        $this->CreateEnumProfile('DABEsy.PumpDisable', 'Power', [
+            [0, $this->Translate('Off'),      -1],
+            [1, $this->Translate('Enabled'),  0x00AA00],
+            [2, $this->Translate('Disabled'), 0xAA0000],
+        ]);
+    }
+
+    /**
+     * Erstellt ein Integer-Profil mit Wert-Assoziationen (Klartext + Farbe).
+     * $assocs: Array aus [Wert, Text, Farbe]
+     */
+    private function CreateEnumProfile(string $name, string $icon, array $assocs)
+    {
+        if (!IPS_VariableProfileExists($name)) {
+            IPS_CreateVariableProfile($name, VARIABLETYPE_INTEGER);
+        }
+        IPS_SetVariableProfileIcon($name, $icon);
+        foreach ($assocs as $a) {
+            IPS_SetVariableProfileAssociation($name, $a[0], $a[1], '', $a[2]);
+        }
     }
 
     private function CreateProfile(string $name, int $type, string $prefix, string $suffix, int $digits, float $min, float $max, float $step, string $icon)

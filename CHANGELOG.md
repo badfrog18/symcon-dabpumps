@@ -2,6 +2,24 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.4] - 2026-06-02
+
+### Hinzugefuegt
+- Anti-Cycling und Niederdruckschutz als bedienbare Standardaktionen (in der Visu umschaltbar)
+
+## [1.3] - 2026-06-02
+
+### Hinzugefügt
+- Klartext-Profile (Assoziationen) für Power Shower, Anti-Cycling, Niederdruckschutz und Pumpe-sperren
+- Variablen fuer Anti-Cycling, Niederdruckschutz und Pumpe-sperren
+
+## [1.2] - 2026-06-02
+
+### Geändert
+- Soll-Druck mit eigenem Profil (Bereich 1–5,5 bar) für einen passenden Slider
+- PowerShowerCommand als Integer statt Schalter (3-Zustand-Enum: --/Start/Stop)
+- Schreib-Codierung robuster: Boolean, direkter Code- und Label-Treffer bei Enums
+
 ## [1.1] - 2026-06-02
 
 ### Hinzugefügt
