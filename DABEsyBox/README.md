@@ -75,16 +75,55 @@ Folgende Profile werden angelegt: `DABEsy.Pressure`, `DABEsy.Flow`, `DABEsy.Flow
 
 ## 6. PHP-Befehlsreferenz
 
+Alle Befehle brauchen als erstes die `InstanzID` deiner DAB-EsyBox-Instanz. Diese findest du, indem du im Objektbaum auf die Instanz klickst – die ID (z.B. 12345) steht oben bzw. in den Objekteigenschaften. In den Beispielen unten steht stellvertretend `12345`.
+
+### Befehle
+
 `boolean DABEsy_Update(integer $InstanzID);`
-Ruft sofort die aktuellen Daten ab und aktualisiert die Variablen.
+Ruft sofort die aktuellen Daten von der Pumpe ab und aktualisiert alle Variablen. Wird normalerweise automatisch vom Timer aufgerufen.
+```php
+DABEsy_Update(12345);
+```
 
 `DABEsy_TestConnection(integer $InstanzID);`
-Testet die Anmeldung und listet verfügbare Installationen und Geräte auf.
+Testet die Anmeldung und listet alle gefundenen Installationen und Geräte mit ihren IDs und Seriennummern auf. Praktisch zum Einrichten.
+```php
+DABEsy_TestConnection(12345);
+```
 
 `DABEsy_ListWritableParams(integer $InstanzID);`
-Listet alle Parameter auf, die der aktuelle Account schreiben darf, inklusive Typ und Wertebereich.
+Listet alle Parameter auf, die dein Account auf dieser Pumpe schreiben darf – inklusive Typ, Wertebereich und möglichen Werten. Das Ergebnis hängt von deiner Account-Rolle ab (Customer/Installateur).
+```php
+DABEsy_ListWritableParams(12345);
+```
 
 `boolean DABEsy_SetParameter(integer $InstanzID, string $Key, mixed $Value);`
-Schreibt einen Parameter auf die Pumpe. Der reale Wert wird übergeben (z.B. 3.5 für 3,5 bar); die Codierung anhand der Geräte-Metadaten erfolgt automatisch.
+Schreibt einen Parameter auf die Pumpe. Du übergibst den **realen Wert** (z.B. `3.5` für 3,5 bar) – die Umrechnung in den von der Pumpe erwarteten Code erfolgt automatisch anhand der Geräte-Metadaten. Gibt `true` bei Erfolg zurück.
+```php
+// Soll-Druck auf 3,5 bar setzen
+DABEsy_SetParameter(12345, "SP_SetpointPressureBar", 3.5);
+```
 
-Zusätzlich sind ausgewählte Variablen (z.B. Soll-Druck) als bedienbare Standardaktion freigeschaltet und können direkt in der Visualisierung verstellt werden, sofern der Account die Schreibrechte besitzt.
+### Häufige schreibbare Parameter
+
+Welche Parameter dein Account tatsächlich schreiben darf, zeigt dir `DABEsy_ListWritableParams`. Typische Beispiele (Werte je nach Modell/Firmware):
+
+| Key                         | Bedeutung               | Beispielaufruf                                              |
+| --------------------------- | ----------------------- | ---------------------------------------------------------- |
+| `SP_SetpointPressureBar`    | Soll-Druck (1–5,5 bar)  | `DABEsy_SetParameter(12345, "SP_SetpointPressureBar", 3.5);` |
+| `RP_PressureFallToRestartBar` | Restart-Druckabfall   | `DABEsy_SetParameter(12345, "RP_PressureFallToRestartBar", 0.5);` |
+| `SleepModeEnable`           | Sleep Mode an/aus       | `DABEsy_SetParameter(12345, "SleepModeEnable", 1);`        |
+| `AY_AntiCycling`            | Anti-Cycling (0/1/2)    | `DABEsy_SetParameter(12345, "AY_AntiCycling", 2);`         |
+| `EK_LowPressEnable`         | Niederdruckschutz (0/1/2) | `DABEsy_SetParameter(12345, "EK_LowPressEnable", 1);`     |
+| `AF_AntiFreeze`             | Frostschutz an/aus      | `DABEsy_SetParameter(12345, "AF_AntiFreeze", 1);`          |
+| `AE_AntiLock`               | Anti-Lock an/aus        | `DABEsy_SetParameter(12345, "AE_AntiLock", 1);`            |
+| `PowerShowerCommand`        | Power Shower (0=--, 1=Start, 2=Stop) | `DABEsy_SetParameter(12345, "PowerShowerCommand", 1);` |
+| `ErasePartialFlowCounter`   | Teil-Durchflusszähler zurücksetzen | `DABEsy_SetParameter(12345, "ErasePartialFlowCounter", 1);` |
+| `ResetActualFault`          | Aktuellen Fehler quittieren | `DABEsy_SetParameter(12345, "ResetActualFault", 1);`   |
+
+> **Vorsicht:** Parameter wie `PumpDisable` (sperrt die Pumpe), `Reboot` und `UpdateFirmware` sind ebenfalls schreibbar. Diese nur bewusst verwenden – ein versehentliches `UpdateFirmware` oder `PumpDisable` willst du nicht in einer Automation haben.
+
+### Bedienen direkt in der Visualisierung
+
+Folgende Werte sind als Standardaktion freigeschaltet und lassen sich ohne PHP direkt in der Visualisierung verstellen (sofern dein Account die Schreibrechte hat): Soll-Druck (Slider), Sleep Mode (Schalter), Anti-Cycling, Niederdruckschutz und Power Shower (jeweils Auswahl). Alle anderen schreibbaren Parameter erreichst du über `DABEsy_SetParameter`.
+
