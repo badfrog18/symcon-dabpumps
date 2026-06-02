@@ -80,3 +80,11 @@ Ruft sofort die aktuellen Daten ab und aktualisiert die Variablen.
 
 `DABEsy_TestConnection(integer $InstanzID);`
 Testet die Anmeldung und listet verfügbare Installationen und Geräte auf.
+
+`DABEsy_ListWritableParams(integer $InstanzID);`
+Listet alle Parameter auf, die der aktuelle Account schreiben darf, inklusive Typ und Wertebereich.
+
+`boolean DABEsy_SetParameter(integer $InstanzID, string $Key, mixed $Value);`
+Schreibt einen Parameter auf die Pumpe. Der reale Wert wird übergeben (z.B. 3.5 für 3,5 bar); die Codierung anhand der Geräte-Metadaten erfolgt automatisch.
+
+Zusätzlich sind ausgewählte Variablen (z.B. Soll-Druck) als bedienbare Standardaktion freigeschaltet und können direkt in der Visualisierung verstellt werden, sofern der Account die Schreibrechte besitzt.

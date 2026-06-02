@@ -119,15 +119,148 @@ class DABEsyBox extends IPSModule
         echo $msg;
     }
 
+    /**
+     * Konfigurations-Button: Listet alle Parameter auf, die der aktuelle
+     * Account schreiben darf (inkl. Typ, Einheit, Wertebereich).
+     */
+    public function ListWritableParams()
+    {
+        $token = $this->GetToken();
+        if ($token === false) {
+            echo $this->Translate('Login failed. Please check username and password.');
+            return;
+        }
+
+        $cfg = $this->ResolveConfig($token);
+        if ($cfg === false) {
+            echo $this->Translate('Could not load device configuration.');
+            return;
+        }
+
+        $params = $cfg['metadata']['params'] ?? $cfg['params'] ?? [];
+        if (count($params) === 0) {
+            echo $this->Translate('No parameters found in configuration.');
+            return;
+        }
+
+        // Nach Rolle filtern: schreibbar, wenn "change" eine Customer-Rolle enthält
+        $customerRoles = ['CUSTOMER', 'CUSTOMER-PRO', 'CUSTOMER_PRO', 'CUSTOMER_FREE'];
+        $writable = [];
+        foreach ($params as $p) {
+            $change = $p['change'] ?? [];
+            if (!is_array($change)) {
+                $change = [];
+            }
+            $canWrite = count(array_intersect($change, $customerRoles)) > 0;
+            if ($canWrite) {
+                $writable[] = $p;
+            }
+        }
+
+        if (count($writable) === 0) {
+            echo $this->Translate('No writable parameters available for this account (you may need an installer account).');
+            return;
+        }
+
+        $msg = $this->Translate('Writable parameters for this account:') . "\n\n";
+        foreach ($writable as $p) {
+            $key  = $p['name'] ?? '?';
+            $type = $p['type'] ?? '?';
+            $unit = $p['unit'] ?? '';
+            $line = "• {$key}  [{$type}]";
+
+            if ($type === 'measure') {
+                $min = $p['min'] ?? $p['warn_low'] ?? '?';
+                $max = $p['max'] ?? $p['warn_hi'] ?? '?';
+                $w   = $p['weight'] ?? 1;
+                $line .= "  Bereich {$min}–{$max} {$unit}  (weight {$w})";
+            } elseif ($type === 'enum') {
+                $vals = [];
+                foreach (($p['values'] ?? []) as $v) {
+                    if (is_array($v) && count($v) >= 2) {
+                        $vals[] = "{$v[0]}={$v[1]}";
+                    }
+                }
+                $line .= '  Werte: ' . implode(', ', $vals);
+            }
+            $msg .= $line . "\n";
+        }
+        $msg .= "\n" . $this->Translate('Use DABEsy_SetParameter(InstanceID, "Key", value) to write.');
+        echo $msg;
+    }
+
+    /**
+     * Schreibt einen Parameter auf die Pumpe.
+     * $value ist der reale Wert (z.B. 3.5 für 3,5 bar) - die Codierung
+     * (Skalierung, Enum-Auflösung) passiert anhand der Geräte-Metadaten.
+     */
+    public function SetParameter(string $Key, $Value): bool
+    {
+        $token = $this->GetToken();
+        if ($token === false) {
+            $this->SendDebug('SetParameter', 'Login fehlgeschlagen', 0);
+            return false;
+        }
+
+        $serial = $this->ResolveSerial($token);
+        if ($serial === false) {
+            $this->SendDebug('SetParameter', 'Kein Gerät gefunden', 0);
+            return false;
+        }
+
+        // Wert anhand der Metadaten codieren
+        $code = $this->EncodeValue($token, $Key, $Value);
+
+        $body = json_encode(['key' => $Key, 'value' => (string) $code]);
+        $response = $this->HttpRequest('POST', self::API_BASE . "/dum/{$serial}", $body, [
+            'Authorization: Bearer ' . $token,
+            'Content-Type: application/json',
+        ]);
+
+        if ($response === false) {
+            $this->SendDebug('SetParameter', "Schreiben von {$Key}={$Value} (code {$code}) fehlgeschlagen", 0);
+            return false;
+        }
+
+        $this->SendDebug('SetParameter', "{$Key} = {$Value} (code {$code}) gesetzt", 0);
+        // Direkt danach aktualisieren, damit die Variable den neuen Wert zeigt
+        $this->Update();
+        return true;
+    }
+
     public function RequestAction($Ident, $Value)
     {
-        switch ($Ident) {
-            case 'Update':
-                $this->Update();
-                break;
-            default:
-                throw new Exception('Invalid Ident');
+        if ($Ident === 'Update') {
+            $this->Update();
+            return;
         }
+
+        // Aktions-Variablen: Ident entspricht dem API-Key
+        if (in_array($Ident, $this->GetActionKeys(), true)) {
+            $ok = $this->SetParameter($Ident, $Value);
+            if (!$ok) {
+                $this->SendDebug('RequestAction', "Schreiben von {$Ident} fehlgeschlagen", 0);
+            }
+            // Bei Erfolg hat SetParameter bereits Update() aufgerufen und die
+            // Variable aktualisiert. Bei Misserfolg bleibt der alte Wert stehen.
+            return;
+        }
+
+        throw new Exception('Invalid Ident');
+    }
+
+    /**
+     * Keys, die als bedienbare Standardaktion freigeschaltet werden.
+     * Ob der Account sie tatsächlich schreiben darf, zeigt
+     * "Schreibbare Parameter auflisten".
+     */
+    private function GetActionKeys(): array
+    {
+        return [
+            'SP_SetpointPressureBar',   // Soll-Druck
+            'PowerShowerCommand',       // Power Shower an/aus
+            'SleepModeEnable',          // Sleep Mode an/aus
+        ];
     }
 
     // ========================================================
@@ -225,6 +358,82 @@ class DABEsyBox extends IPSModule
         return $dums[0]['serial'] ?? false;
     }
 
+    /**
+     * Lädt die Parameter-Metadaten (Konfiguration) des Geräts.
+     */
+    private function ResolveConfig(string $token)
+    {
+        // Installation bestimmen
+        $installId = $this->ReadPropertyString('InstallationID');
+        if ($installId === '') {
+            $installations = $this->ApiGet('/api/v1/installation', $token);
+            $list = $installations['values'] ?? $installations['rows'] ?? $installations['installations'] ?? [];
+            if (count($list) === 0) {
+                return false;
+            }
+            $installId = $list[0]['installation_id'] ?? '';
+        }
+        if ($installId === '') {
+            return false;
+        }
+
+        // configuration_id des (ersten/gewählten) Geräts ermitteln
+        $devices = $this->ApiGet("/api/v1/installation/{$installId}", $token);
+        $dums = $devices['dums'] ?? [];
+        if (count($dums) === 0) {
+            return false;
+        }
+
+        $serial = $this->ReadPropertyString('Serial');
+        $configId = '';
+        foreach ($dums as $dum) {
+            if ($serial === '' || ($dum['serial'] ?? '') === $serial) {
+                $configId = $dum['configuration_id'] ?? '';
+                break;
+            }
+        }
+        if ($configId === '') {
+            return false;
+        }
+
+        return $this->ApiGet("/api/v1/configuration/{$configId}", $token);
+    }
+
+    /**
+     * Codiert einen realen Wert in den von der API erwarteten Code,
+     * basierend auf Typ und weight aus den Metadaten.
+     */
+    private function EncodeValue(string $token, string $key, $value)
+    {
+        $cfg = $this->ResolveConfig($token);
+        $params = $cfg['metadata']['params'] ?? $cfg['params'] ?? [];
+
+        foreach ($params as $p) {
+            if (($p['name'] ?? '') !== $key) {
+                continue;
+            }
+            $type = $p['type'] ?? '';
+            if ($type === 'measure') {
+                $weight = $p['weight'] ?? 1;
+                if ($weight && $weight != 1 && $weight != 0) {
+                    return (string) intval(round($value / $weight));
+                }
+                return (string) intval($value);
+            }
+            if ($type === 'enum') {
+                // Wenn ein Label übergeben wurde, passenden Code suchen
+                foreach (($p['values'] ?? []) as $v) {
+                    if (is_array($v) && count($v) >= 2 && (string) $v[1] === (string) $value) {
+                        return (string) $v[0];
+                    }
+                }
+            }
+            break;
+        }
+        // Fallback: Wert unverändert
+        return (string) $value;
+    }
+
     // ========================================================
     // STATUS-VERARBEITUNG
     // ========================================================
@@ -268,6 +477,12 @@ class DABEsyBox extends IPSModule
             }
 
             $this->MaintainVariable($key, $this->Translate($name), $type, $profile, $pos++, true);
+
+            // Bedienbare Parameter als Standardaktion freischalten (Review-konform)
+            if (in_array($key, $this->GetActionKeys(), true)) {
+                $this->EnableAction($key);
+            }
+
             $this->SetValueSafe($key, $this->ConvertValue($raw, $type, $divisor));
         }
     }
@@ -409,7 +624,7 @@ class DABEsyBox extends IPSModule
 
     private function RegisterProfiles()
     {
-        $this->CreateProfile('DABEsy.Pressure',  VARIABLETYPE_FLOAT,   '', ' bar',   1, 0, 0,    0.1, 'Gauge');
+        $this->CreateProfile('DABEsy.Pressure',  VARIABLETYPE_FLOAT,   '', ' bar',   1, 0, 8,    0.1, 'Gauge');
         $this->CreateProfile('DABEsy.Flow',      VARIABLETYPE_FLOAT,   '', ' l/min', 1, 0, 0,    0.1, 'Drops');
         $this->CreateProfile('DABEsy.FlowTotal', VARIABLETYPE_FLOAT,   '', ' m³',    1, 0, 0,    0.1, 'Drops');
         $this->CreateProfile('DABEsy.kWh',       VARIABLETYPE_FLOAT,   '', ' kWh',   1, 0, 0,    0.1, 'EnergyProduction');

@@ -68,6 +68,11 @@
         },
         {
             "type": "Button",
+            "caption": "List Writable Parameters",
+            "onClick": "DABEsy_ListWritableParams($id);"
+        },
+        {
+            "type": "Button",
             "caption": "Update Now",
             "onClick": "DABEsy_Update($id);"
         }
