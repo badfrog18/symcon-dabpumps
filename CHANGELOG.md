@@ -2,6 +2,11 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.5] - 2026-06-02
+
+### Geaendert
+- Power Shower (Aus/Start/Stopp) als bedienbare Standardaktion freigeschaltet
+
 ## [1.4] - 2026-06-02
 
 ### Hinzugefuegt

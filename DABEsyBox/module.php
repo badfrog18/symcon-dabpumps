@@ -261,6 +261,7 @@ class DABEsyBox extends IPSModule
             'SleepModeEnable',          // Sleep Mode an/aus (Schalter)
             'AY_AntiCycling',           // Anti-Cycling (Aus/Ein/Smart)
             'EK_LowPressEnable',        // Niederdruckschutz (Aus/Automatik/Manuell)
+            'PowerShowerCommand',       // Power Shower (Aus/Start/Stopp)
         ];
     }
 
